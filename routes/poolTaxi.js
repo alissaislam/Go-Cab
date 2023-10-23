@@ -34,14 +34,16 @@ function poolSocket (io){
              },
              $expr: {
               $lt: ['$passengersCount', '$totalPassengers']
-            }
-
+            },
+            passengersCount:data.passengersCount
         })
         user.isAvilable=false
           await user.save()
         if(pool){
           
           pool.passengersCount +=1;
+          const location = [data.Slatitude,data.Slongitude,data.Elatitude,data.Elongitude]
+          pool.locations.set(socket.decoded._id,location)
           socket.emit('poolFound',{"msg":"you have joined a pool!",'pool':pool })
           socket.join(`passengersFor${pool.id}`);
           socket.to(`passengersFor${pool.id}`).emit('someOneIn',{'msg':'some one joined'})
@@ -109,13 +111,17 @@ function poolSocket (io){
               'start.1':data.Slongitude,
               'end.0':data.Elatitude,
               'end.1':data.Elongitude,
+              locations:[[socket.decoded._id,[data.Slatitude,data.Slongitude,data.Elatitude,data.Elongitude]]] ,
               totalPassengers:data.totalPassengers,
               createAt: moment().format('YYYY-MM-DD dddd HH:mm:ss')
             })
+            // const location = [data.Slatitude,data.Slongitude,data.Elatitude,data.Elongitude]
+            console.log(pool.locations)
+            // pool.locations.set(socket.decoded._id,location)
             await pool.save()
             socket.join(`passengersFor${pool.id}`);
             socket.emit('poolCreated',{'pool':pool})
-            if(socket.decoded.isDriver){
+            if(socket.decoded.role== 'Driver'){
               await Driver.findByIdAndUpdate(socket.decoded._id,{
                               $set:{
                                   isAvilable:false
@@ -331,7 +337,7 @@ else{
 
   socket.on("disconnect", async (reason) => {
     try{
-    if(socket.decoded.isDriver){
+    if(socket.decoded.role== 'Driver'){
       const driver = await Driver.findById(socket.decoded._id)
       driver.isAvilable=false
       await driver.save()

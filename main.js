@@ -2,6 +2,7 @@ const express = require('express');
 const socketIO = require('socket.io')
 const app = express();
 const http = require('http');
+// const passportsetup = require('./config/passport-setup')
 const { Driver } = require('./models/driver');
 const server = http.createServer(app)
 const io = socketIO(server, {
@@ -11,15 +12,22 @@ const io = socketIO(server, {
     }
   })
 
-// app.get('/',(req,res)=>{
-//     res.render('home',{user:req.user})
-// })
-//app.set('view engine','ejs')
+app.get('/',(req,res)=>{
+    res.render('home',{user:req.user})
+})
+
+app.set('view engine','ejs')
 require('express-async-errors');
 require('./startup/logging')();
 require('./startup/db')();
+require('./startup/passport')(app)
 require('./startup/routes')(app,io);
 require('./startup/config')();
+
+
+//const prestigeRent= require('./routes/PrestigeRent');
+
+//const {job} =require('./routes/PrestigeRent');
 // io.on('connection',(client)=>{
 //     console.log('new connection')
 //     console.log(client.id)
@@ -28,7 +36,6 @@ require('./startup/config')();
 //         logger.info('new connection')
 //         logger.info(client.id)
 //        })
-
 
 const port = process.env.PORT || 3000;
 server.listen(3000,async()=>{ 

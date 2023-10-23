@@ -9,6 +9,7 @@ const router = express.Router();
 
 function orderSocket (io){
   io.on("connection",async (socket)=>{
+    console.log(socket.id)
     socket.on('orderCreate',async (data)=>{
       try{
         let user =  await User.findById(socket.decoded._id);
@@ -44,7 +45,7 @@ user.isAvilable=false
 await user.save()
      for( i = 0 ; i < drivers.length ; i++ ){
 
-      io.to(drivers[i].socketId).emit('newTrip',{"msg":"are you ready",'order':order })
+      io.to(drivers[i].socketId).emit('newTrip',{"msg":"are you ready",'order':order,'user':user })
       io.sockets.sockets.get(drivers[i].socketId).join(`nearestDriversTo${order.id}`);
       
       const message = {
@@ -214,6 +215,16 @@ try{
     if(!user)
     user =  await Driver.findById(order.userId);
     user.isAvilable=true
+    user.points=user.points+0.5
+    io.to(user.socketId).emit('tripEnd',{'msg':"good bye!"})
+    if(user.wallet<order.cost){
+      return socket.emit('error','Insufficient balance, pay cash!.')
+    }else{
+      user.wallet-=order.cost
+      driver.wallet+=order.cost
+    }
+
+    await driver.save()
     await user.save()
   }
   else{
@@ -253,15 +264,21 @@ else{
       let user =  await User.findById(order.userId);
       if(!user)
       user =  await Driver.findById(order.userId);
-      user.isAvilable=false
+      user.isAvilable=true
       await user.save()
       await Order.findByIdAndRemove(order.id)
     }
   })
+  socket.on('driverLocation',async (data)=>{
+    const driver= await Driver.findById(socket.decoded._id)
+    driver.location=data.location
+    await driver.save()
+
+  })
 
   socket.on("disconnect", async (reason) => {
     try{
-    if(socket.decoded.isDriver){
+    if(socket.decoded.role == 'Driver'){
       const driver = await Driver.findById(socket.decoded._id)
       driver.isAvilable=false
       await driver.save()
@@ -271,6 +288,25 @@ else{
     socket.emit('error',err.message)
    }
   });
+
+  socket.on("rating",async(data)=>{
+    try{
+      const order = await Order.findById(data.orderId)
+      if(!order)
+      return socket.emit("error",{"msg":"Order not found."})
+      console.log(order.DriverId)
+      const driver = await Driver.findById(order.driverId)
+      if(!driver)
+      return socket.emit("error",{"msg":"Driver not found."})
+
+      
+      driver.rating = (driver.rating+data.rating)/(driver.ratingCount+1)
+      driver.ratingCount++
+      await driver.save()
+    }catch(err){
+      socket.emit('error',err.message)
+    }
+  })
 
    })
   
@@ -297,42 +333,6 @@ else{
       console.log(err.message)
      }
   }
+  module.exports.orderSocket = orderSocket
   
-  //payment after finishing the trip
-  router.put('/payment',auth(['User']),async (req,res)=>{
-    try{
-    const tripPrice = 500
-    const order = await Order.find({userId:req.user._id})
-
-    const user = await User.find({_id:order.userId})
-    const driver = await Driver.find({_id:order.driverId})
-    if(user.wallet<tripPrice)
-    return res.status(400).send('Insufficient Balance! Pay cash.')
-    user.wallet-=tripPrice
-    driver.wallet+=tripPrice
-    await user.save()
-    await driver.save()
-    return res.send(`Payment success, Your balance is: ${user.wallet}`)
-    }catch(ex){
-      console.log(ex)
-      return res.status(500).send(ex)
-    }
-  })
-//rate the driver after finishing the trip
-  router.put('/rating',auth(['User']),async(req,res)=>{
-    const rating = req.body.rating
-    try{
-      const order = await Order.find({userId:req.user._id})
-      const driver = await Driver.find({_id:order.driverId})
-      const ratingCount = driver.ratingCount+1
-      driver.rating = rating/ratingCount
-      driver.ratingCount++
-      await driver.save()
-      return res.send('Success.')
-    }catch(ex){
-      console.log(ex)
-      return res.status(500).send(ex)
-    }
-  })
-  module.exports.orderSocket=orderSocket;
   

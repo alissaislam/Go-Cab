@@ -23,8 +23,13 @@ passport.use(
         //passport callback function
             User.findOne({googleId:profile.id}).then((currentUser)=>{
             if(currentUser){
-            res.send('Already registered')
-            done(null,currentUser)
+            console.log('user is,',currentUser)
+            try{
+                done(null,currentUser)
+
+            }catch(err){
+                console.log(err)
+            }
             }else{
                 new User({
                     googleId:profile.id,

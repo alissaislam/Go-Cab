@@ -1,7 +1,7 @@
 module.exports = {
     google:{
-        clientID:'759768351792-vqn7h0u4q19bv2a1mhsq7ufpdls6loo6.apps.googleusercontent.com',
-        clientSecret:'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'
+        clientID:'759768351792-12b3agf1oopvhr2fn4niqb0e9lrq54ac.apps.googleusercontent.com',
+        clientSecret:'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'
     },
     session:{
         cookieKey:'imeAwesome'

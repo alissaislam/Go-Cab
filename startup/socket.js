@@ -26,7 +26,7 @@ function setupSocket (io){
       logger.info('new connection')
       
       let user;
-      if(socket.decoded.isDriver){
+      if(socket.decoded.role == 'Driver'){
        user = await Driver.findById(socket.decoded._id)
        user.isAvilable=true
       }
